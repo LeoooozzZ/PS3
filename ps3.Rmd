@@ -1,0 +1,620 @@
+---
+title: "What variable affects the number of children in the household"
+author: "Zean Hua, Ziqi Ling, Shijie Sun, Jiayi Zeng"
+date: "2020/10/18"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+The Canadian aging phenomenon has been gradually changing the Canadian population structure in recent decades. The structure change is mainly caused by which "Canadian fertility is below the replacement level." ["Section 2: Population by Age and Sex." Annual Demographic Estimates: Canada, Provinces and Territories. 27 Nov. 2015. Web. 16 Oct. 2020]In this analysis, we explore Canadian fertility along with the reasons behind the low fertility rate with the data from 2017 Canadian Canada's General Social Survey (GSS) from the perspective of the respondent's happiness level, education level, income, and residential province. This paper also includes data approach methodology, the statistical model interpretation, results in the analysis as well as discussion about results' weakness, improvements and implication in reality. 
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+library(lme4)
+library (lattice)
+library(dplyr)
+library(tinytex)
+tinytex::install_tinytex()
+```
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# update.packages(ask = FALSE, checkBuilt = TRUE)
+# tinytex::tlmgr_update()
+```
+
+# Introduction
+
+## Background and Introduction to the Analysis
+
+At first, The reason why we are used this data because our group was particularly interested in this data. This data seems very simple, but there is a lot of content behind it that we should think about. Besides, we believe that having a child is related to the child's parents and two families. Canada is a multicultural country; under such an environment, people become especially important. The number of children in the family can predict Canada's population future trend, but these are the directions for our future research. This report uses education, family income, feeling about life, age, and province to predict the total number of children in each household. The variables we look for are related to the number of children in the household. For example, family income, will income difference makes people more or less willing to have children? Will different provinces have different benefits to stimulate population growth? According to the Handbook of Population and Family Economics, “demand models predict, and empirical studies confirm that an increase in women's wages and education have a more negative impact on fertility”.[ Schultz, T. Paul. "Chapter 8 Demand for Children in Low-Income Countries." Handbook of Population and Family Economics. Elsevier, 06 Apr. 2005. Web. 14 Oct. 2020.] Does this result still hold if we review the number of children respondents have with GSS data and statistical models instead of economic models? 
+
+\newpage
+
+Through model analysis and data interpretation, we found that it’s universal to have two children in Canada. There is quite a proportion of households that have no child. From the distribution of the total number of children respondents have, there are only 1.79% of respondents have six to seven children. Based on the data, we predict that the number of Canadian citizens who have six to seven children is no more than 1.79% approximately. To explore the reasons behind the low fertility rate, we further analyze the life satisfaction level, education level, income level and residential province. A majority of Canadian citizens are satisfied with their life. High satisfaction reveals Canadian well-considerate social benefits provided to citizens, but it does set a burden to encourage people to change their lifestyle. Based on the distribution of life satisfaction level, we estimate that around 72% of Canadian citizens are eighty percent and more satisfied with their life. It is quite difficult for the government to encourage citizens to have more children since adding one child will significantly alter the lifestyle of a family. To maximize the effect upon stimulating fertility rate, the government can start with the citizens who is high school degree and low income. From the distribution of education level, we have found that respondents who are high school degreed are the largest population group under the category of no child, two children and three children. The government can focus on high-school-degreed citizens if we want to solve the aging phenomena sooner. In terms of income level, we predict that the citizens who are from the middle class tend to bear more children in their households. The middle class is financially sufficient and educational adequate. If the government provides a more customized and detailed child benefit and women healthcare to the middle-class family, the productivity to increase fertility rate may be appreciable. To better help the government target population, we provide residential provinces distribution. Based on the residential province distribution, there is 27.3% of respondents from Ontario. According to the statistical data, we conclude that the Ontario population shall be the government targeted population because the largest proportion of our respondents are from Ontario. If the government chiefly perfects Ontario residents’ social benefits, which are about child benefits and women's healthcare benefits. Based on this analysis, we suggest the government target middle-class, middle-satisfied, high-school-degreed Canadians to effectively increase the Canadian fertility rate. 
+
+## Weaknesses
+
+Our research database is from Canada’s General Social Survey (GSS) program. The GSS program collects data through telephone interviews and internet questionnaires, along with the implication of Computer Assisted Telephone Interviewing (CATI). This data approach has advantages as well as weaknesses. The cost is low, but the coverage of respondents is limited. The use of the internet and telephone leads our data to not be able to concentrate on certain groups, which are elder and low-income. Although the number of cell-phone-only households has increased since cellphone gradually became everyone’s necessity product, we still cannot ignore that there is a certain percentage of Canadians who do not have a cell phone. By collecting data from the internet and telephone, the samples collected have excluded certain population groups that need the society’s extra attention the most.
+
+Another weakness of prediction is non-response bias. This may cause the survey’s length and time-consumption. In our response, there is a large percentage of respondents answer valid skip. The non-response bias drops our valid response rate. Statistics Canada enhance the valid response rate by reviewing the respondents who did not provide a valid answer when they first responded to the survey. In 2017, the response rate reached over fifty percent. 
+
+With this analysis, we can better understand the reason behind the Canadian low fertility rate. From the distribution of respondents’ residential province, this paper helps the Canadian federal and provincial governments better target their direction to improve childbearing benefit and education benefit. Our analysis can help determine the question of whether the Canadian government shall raise the Canadian Child Benefit (CCB) since aging phenomena has been a social concern over the years. If aging phenomena cannot be alleviated, the Canadian economy will be stroked sooner or later.   
+
+\newpage
+
+# Data
+
+## The raw data
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+df <- read.csv('gss111.csv')
+dim(df)
+
+# Extra data cleaning 
+df[df$age < 18,'age_group'] <- 'under 18'
+df[df$age >= 18 & df$age < 25,'age_group'] <- '18-25'
+df[df$age >= 25 & df$age < 35,'age_group'] <- '25-35'
+df[df$age >= 35 & df$age < 45,'age_group'] <- '35-45'
+df[df$age >= 45 & df$age < 65,'age_group'] <- '45-65'
+df[df$age >= 65,'age_group'] <- 'over 65'
+
+# constrcut a data frame only have variables we are interested
+df_new <- df %>% 
+  select(age_group, age, feelings_life, income_family, province, education, total_children)
+
+# remove NA values 
+df_new <- na.omit(df_new)
+plot(df_new)
+
+```
+## Data example
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+head(df_new)
+```
+
+\newpage
+
+## Source of the Data
+Our dataset is based on GSS 2017 and cleaned by Rohan Alexander and Sam Caetano. GSS is a General Social Survey which focuses on the families in Canada. The data of this paper contains total_children, feelings_right, education, income_family and province. The next paragraph will further explain the five variables. The data is originally collected and published by Statistics Canada. The 2017 GSS collected by Statistics Canada is our dataset. The survey is conducted from February to November in 2017 with a sample survey that is a cross-sectional design. 
+
+## Variables in our Selected Dataset
+The selected variables we used in our dataset are total_children, feelings_life, education, income_family and province. The variables are renamed after Rohan Alexander and Sam Caetano clean the code.
+The definition of each variable is explained below.
+
+### total_children: It originally called TOTCHDC. The variable measures the number of children in each households of our respondents.
+
+feelings_life: It is originally called SLM_01. It is the variable to measure the life satisfaction level. 
+
+Education: It is originally called ESC1_01. It is variable to measure respondents’ education level (whether respondents are currently working towards which education degree and diploma).
+
+income_family: It is originally called TTLINCG2. The variable categorizes people into different income and aims to find out which income status the respondent is from.
+
+province: It is originally called PRV. This variable indicates which province respondents is from.
+
+## Population and Sample, Methodology and Approach used to Collect and Process Data
+The target respondents of GSS2017 include Canadian citizens who are aged 15 and above, excluding full-time institution workers and respondents in Yukon, Northwest Territories, Nunavut. The respondents are selected from the target population. Our Sampling population provide responses based on questionnaires. Statistics Canada collects data by distributing questionnaires to the sampling population. The survey is divided into fifteen different sections: entry component, respondent’s date of birth, family origins, leaving the parental home, conjugal history, intentions and reasons to form a union, respondent’s children, and other eight questions. The sampling strategy that Statistics Canada used is simple random sampling without replacement. Such a method allows interviewers to complete the questionnaire in numerous attempts with our randomly selected respondents. The survey frame uses two different components. One component is the listed telephone number in use (landline and cellular) available to Statistics Canada from various sources (for example, telephone companies and census of the population). The other component is the address register (AR), which is the list of dwellings within ten provinces in Canada. AR is the method that is used to group the telephone numbers, which are associated with the same valid addresses together. This approach to the respondents, created in 2013, combines telephone numbers (landline and cellular) with Statistics Canada Register and collects data via computer-assisted telephone interviews (CATI). Thus, the respondents are reached throughout phone calls with the choice of the language spoken. This sampling approach performs well in response coverage. However, it is time-consuming since there are millions of telephone numbers and addresses across ten provinces. Besides, this survey method needs less labour and the cost to hire people conducting telephone interviews will be a relatively large amount, but much cheaper than the traditional way of survey sampling. Other than the labour cost, Statistics Canada needs to attain telephone numbers from communication companies (Bell, etc.). The access fee will be costly, as well. 
+
+\newpage
+
+## The Key Features, Strengths and Weaknesses about the Survey.
+The key feature of the survey is its distribution method. The procedure to collect the data is completed by answering phone calls with computers’ assistance. This is different from the traditional way of sampling by distributing printed questionnaires. Through such a distribution method, an advantage is a wide coverage over the target population and sample randomization. Everyone from our target population is possibly selected as one sample of GSS. 
+
+The weaknesses of this survey are the following. First, as respondents are able to complete the survey within a reasonable range of times while their former answers will not be replaced, the true number of sample size is underestimated. The sample size is around twenty thousand (without the replacement of the situation of answering the survey many times), which is not large enough to represent and predict a country’s situation. Secondly, there is non-response bias, as the survey gives out to the respondents. One possible reason behind the non-response is the interview’s length. If the interview is quite time-consuming with a long question, selected respondents may not have enough patience and time to complete all. In order to improve the response rate, Statistics Canada starts to re-contact respondents who did not complete the interview and explain the interview’s importance to Canadian citizens and government. For respondents who are unavailable to answer the interview, Statistics Canada provides appointments as an option. Gradually, the Canadian response rate of GSS in 2017 has reached more than 50%. There are also adjustments applied to the non-responding telephone numbers; non-responding telephone numbers are dropped after they are weighted by responding to telephone numbers. 
+
+
+\newpage
+
+# Model
+
+## Variance Component Model 
+
+Variance components model is a multilevel model without explanatory variable which could be
+used explain the variation in the number of children can be attributed to the provinces in which the
+respondents live, it has a form as following:
+
+(Null Model in R code):
+
+$$
+ChildrenNo_{ij}=\beta_0 +\mu_j +\epsilon_{ij}          
+$$
+
+where $ChildrenNo_{ij}$ is the total number of children for $i$th respondent living in $j$th province, $\mu_j$ is the deviation of BMI values of $j$th province from average, $\epsilon_{ij}$ is the error of modeling for the $i$th respondent living in $j$th province.
+
+For testing the significance of a Multilevel Model, we compare it with a linear model only with an intercept term
+
+(single model in R code):
+
+$$
+ChildrenNo_{ij}=\beta_0  +\epsilon_{ij}   
+$$
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+
+# Running a Variance Component Model
+nullmodel <-lmer (total_children ~ (1|province), data = df_new, REML=FALSE)
+summary(nullmodel)
+
+
+# Establishing the Significance of a Multilevel Model
+
+singlemodel <- lm (total_children ~ 1, data = df_new)
+anova (nullmodel, singlemodel)
+# The testing results shows that the multilevel model does show a significant improvment 
+# in model fitting than a single level model.
+
+# Exploring Province Level Effects
+
+nullrand <- ranef(nullmodel)
+nullrand
+dotplot(ranef(nullmodel))
+# Provinces with negative random effects have, on average, lower number of total children. 
+# Positive random effects are assoicated with higher average number of total children, i.e. 
+# on average Ontario and BC people appear the least children province, while SK and MB appear the most.
+
+```
+
+The testing results shows that the multilevel model does show a significant improvment in model fitting than a single level model.
+
+\newpage
+
+## Random Intercept Models
+To explore the difference between provinces in total number of children after controlling on fixed level 
+effects, we perform Random Intercept Model by adding variables into
+Variance Components model. The random intercept model with a single fixed effect has a
+form:
+
+(ri1 model in R code):
+$$
+ChildrenNo_{ij}=\beta_0  + \beta_1Feeling+\mu_j+ \epsilon_{ij}   
+$$
+
+We are interested about the question that "Do differences in total number of children between provinces remain after controlling for feeling of life?'.
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# Running a Random Intercept Model
+# Adding explanatory varaibles to the Variance Component Model turns 
+# the model into a Random Intercept Model
+# "Do differences in total number of children between provinces remain after controlling for feeling of life?'
+
+ri1 <-lmer (total_children ~ feelings_life + (1|province), data = df_new, REML=FALSE)
+summary(ri1)
+
+# The coefficient for feeling is 0.076 and can be interpret as follows
+# people with higher feeling score tend to have more children and the t-value for this coefficient is 
+# statistically significant.
+```
+
+The coefficient for feeling is 0.076 and can be interpret as follows people with higher feeling score tend to have more children and the t-value for this coefficient is statistically significant. Compared to the variance components model, the intercept has hardly changed, nor has the level 2 variance. This suggests that the answer to the question,  "Do differences in total number of children between provinces remain after controlling for feeling of life?' The answer is "Yes".
+
+In order to check if the inclusion of an explanatory variable improves model fit, we compare this random fixed effect model (ri1) with a linear model and conduct a ANOVA testing between these two models
+
+(sl1 model in R code):
+
+$$
+ChildrenNo_{ij}=\beta_0  + \beta_1Feeling+ \epsilon_{ij}   
+$$
+```{r, message=FALSE}
+# testing 
+sl1 <- lm (total_children ~ 1 + feelings_life, data = df_new)
+summary (sl1)
+anova (ri1, sl1)
+# ri1 is better for fitting data
+
+# Checking if the inclusion of an explanatory variable improves model fit
+anova (ri1, nullmodel)
+# ri1 is better for fitting data
+
+```
+
+The results show that the random fixed effect model is better for fitting data
+
+Similarly, we can examine the fixed effect of education and family income
+
+"Do differences in total number of children between provinces remain after controlling on Education?'
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+ri2 <-lmer (total_children ~ education + (1|province), data = df_new, REML=FALSE)
+summary(ri2)
+```
+
+The coefficient for education varies on different levles and can be interpret as follows people with higher level of education backgroud tend to have less children (for instance, the coefficient for people with diploma or degree above the bachelor has the smallest coefficient = 0.05) while people with insufficient education experience are more likely having more children (for example, people with education less than high school).
+
+Compared to the variance components model, the intercept has hardly changed, nor has the level 2 variance. This suggests that the answer to the question, "Do differences in total number of children between provinces remain after controlling for education?' The answer is "Yes".
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# testing 
+sl2 <- lm (total_children ~ 1 + education, data = df_new)
+summary (sl2)
+anova (ri2, sl2)
+# ri2 is better for fitting data
+
+# Checking if the inclusion of an explanatory variable improves model fit
+anova (ri2, nullmodel)
+# ri2 is bettern for fitting data
+```
+
+Now we look into a random effect model which contains the combined fixed effects of feeling of life and education backgroud.
+
+(ri12 model in R code)
+$$
+ChildrenNo_{ij}=\beta_0  + \beta_1Feeling+ \beta_2Eduction+\mu_j+\epsilon_{ij}   
+$$
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# feelings and education combined
+
+ri12 <-lmer (total_children ~ feelings_life + education + (1|province), data = df_new, REML=FALSE)
+summary(ri12)
+
+# testing
+
+anova(ri12, ri1)
+anova(ri12, ri2)
+# combined model  ri12 is better
+```
+
+The results of ANOVA indicate that later model combined Feeling and Education is more appropriate for modeling than previous model only contains singel fixed effect. 
+
+For the effect of family income, 
+
+(ri3 model in R code)
+
+$$
+ChildrenNo_{ij}=\beta_0  + \beta_3Income+\mu_j+\epsilon_{ij}   
+$$
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# famliy income 
+
+ri3 <-lmer (total_children ~ income_family + (1|province), data = df_new, REML=FALSE)
+summary(ri3)
+
+```
+The outcome of this multilevel model is ambiguous to explain the effects of famliy income on total number of children, since the t value for coefficients are not all highly significant. However, if we add this term into ri12 model we find out that low income famliy are more likely to have more children when it compares to the rich famliy. 
+
+Combined all three fixed effects: Feeling, Education and Income
+
+(ri123 model in R code)
+$$
+ChildrenNo_{ij}=\beta_0  + \beta_1Feeling+ \beta_2Eduction+\beta_3Income+\mu_j+\epsilon_{ij}   
+$$
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+ri123 <-lmer (total_children ~ feelings_life + education + income_family + (1|province), data = df_new, REML=FALSE)
+summary(ri123)
+# testing 
+anova(ri123, ri12)
+# ri123 combined model with all three explanatory variables are more aappropriate.
+```
+
+## Random Slope Model 
+
+In random intercept models, we assumed that the fixed effects were the same for all province. In this section, we check the impacts of interested variables within provinces by adding random term $\mu_{ij}$ to the coefficient of explanatory variable. Let us consider the
+impact of explanatory variable Feeling of life within in different provinces as an example. The
+random slope model has a form:
+
+(rs.gen1 model in R code)
+$$
+ChildrenNo_{ij}=\beta_0  + (\beta_1 + \mu_{1ij})Feeling+\mu_j+\epsilon_{ij} 
+$$
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# Fitting and Interpreting a Random Slope Model - 
+# Does the Impact of Feeling Vary Betwen Provinces?
+
+rs.gen1 <- lmer(total_children ~ feelings_life + education + income_family + (1 + feelings_life|province), data = df_new, REML=FALSE)
+summary(rs.gen1)
+
+
+# Testing the Significance of Random Slopes
+# Does the Impact of Education Vary Betwen Provinces?
+anova (rs.gen1, ri123)
+```
+Since the correlation between a province random intercept and the same province random effect for feeling is positively equal to 1. In this case, it might suggest that a province which is towards the upper end of the distributions for interepts will also be relatively high up in the distribution of random effects for people with higher score in feeling life.Howerver, we notice that the effect of province does not hold by and the testing ressults shows that rs.gen1 is not perform as well as the random intercept model ri123. Therefore, the impact of feeling life score does not vary between provinces.
+
+Similarly, we check whether the impact of Education varies between provinces. 
+```{r}
+rs.gen2 <- lmer(total_children ~ feelings_life + education + income_family + (1 + education|province), data = df_new, REML=FALSE)
+summary(rs.gen2)
+anova (rs.gen2, ri123)
+```
+
+It implies that impact of education score on total number of children does not vary between provinces.
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# Does the Impact of Family income Vary Betwen Provinces?
+
+rs.gen3 <- lmer(total_children ~ feelings_life + education + income_family + (1 + income_family|province), data = df_new, REML=FALSE)
+summary(rs.gen3)
+anova (rs.gen3, ri123)
+
+rsgenrand <- ranef(rs.gen3)
+rsgenrand
+dotplot(ranef(rs.gen3))
+```
+
+*The results shows that the impact of family income on number of children does vary between provinces.*
+
+\newpage
+
+## Model Diagnose
+
+The diagnostic plots for the random intercept model (with all three variables: Feeling, Income and Education) and the random slope model （with random slope of Education） are depicted in the following figures. Basically, the normality assumption could be reasonably satisfied in either of these two models since most of the dots are affiliated to the straight line in the Normal Q-Q plot.
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+
+# diagnose plot 
+
+# model ri123, the random intercept model with three variables: Feeleeng, Education and Income
+y = residuals(ri123)
+x = fitted.values(ri123)
+qqnorm(x, main = "Normal Q-Q Plot")
+qqline(x, col = "steelblue", lwd = 2)
+
+# model rs.gen, the random intercept model with random slope of education
+y = residuals(rs.gen3)
+x = fitted.values(rs.gen3)
+
+abline(h = 0, lty = 2, col = "red")
+qqnorm(x, main = "Normal Q-Q Plot")
+qqline(x, col = "steelblue", lwd = 2)
+
+```
+
+## Disscussion of strength &weakness
+
+The superiority of the multilevel regression model is obvious: it is more reasonable for inference on data that are clustered in groups (hierarchical data), comparing to an ordinary single fixed effect model (e.g. standard ordinary least squares model). Instead of estimating separate intercept/slope in multiple groups, multilevel regression model can minimize the number of estimated parameters: the mean and variance of the intercepts, or the average slope along with its variance across the groups. Generally, a multilevel regression model is capable of dealing with data that is hierarchically structured, modeling variation in the social world, and conducting explicitly tests for differences in parameters by groups. However, it has a number of potential weaknesses. The main concern that we might encounter is that we assume that the means of multiple levels are samples from a normal distribution, for instance, within each province, the total number of children follows a normal distribution with a provincial specified mean $\beta_{0j}$, and a variance $\sigma^2$. Moreover, we assume that the provincial-specified means vary according to a normal distribution, then, heterogeneity in responses to lower-level variables may not be hold since the groupwise heterogeneity in the mean are controlled. Additionally, a multilevel regression model is a complicated model which is more likely to generate computational problems and consume our attention to understand the results than an ordinary regression model. 
+
+
+
+\newpage
+
+# Results
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+
+count_children<- df_new %>% 
+  count(total_children) #counting the variable total_children
+
+ggplot(count_children, aes(x = total_children, y = n))+
+  geom_bar(stat = "identity", col = "white", fill = "salmon1") + 
+  geom_text(aes(label = n), hjust = 0.5, vjust = -0.25) + 
+  labs(title = "Number of children reported by respondent",
+       x = "Number of Children",
+       y = "Count",
+       tag = "Figure1",
+       caption = "Source : General Social Survey, Families, 2017.") + 
+  theme_classic(base_size = 10) + # setting the font size
+  scale_x_continuous(breaks=0:7, labels=c(0:7)) #setting the interval
+
+```
+Figure 1 demonstrates the total number of children respondents have a cap of seven in a bar plot. A total of 20602 samples was collected with 20039 valid responses. The plot is right-skewed. The left skewness shows that a majority of respondents have fewer children. The two largest proportions are respondents who have no child and respondents who have two children. There are 6087 respondents who have no child, while 6048 respondents have two children. The least proportion shown in the graph is the respondents who have seven children, with a number of 174. There are 30.3% of respondents have no child; 14.1% of respondents have one child; 30.2% of Respondents have two children; 15.2% of respondents have three children; 6.1% of respondents have four children; 2.3% of respondents have five children; 0.90% respondents have six children; 0.90% respondents have seven children. 
+
+\newpage
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+
+# Table 1 basic stats value of total children by age group
+df_new %>%
+  group_by(age_group) %>% 
+  summarize(n = n(), Mean = mean(total_children, na.rm = T), Median = median(total_children, na.rm = TRUE),SD = sd(total_children, na.rm = TRUE))  %>% 
+  mutate(freq = round(n / sum(n), 4))
+
+```
+For the first table, we divided the respondent into different age groups and created a function for summarizing some statistics properties, such as mean and median, of the total number of children in their household for the different age groups. As we can see in table 1, the mean of the total number of children for the people who are over 65 is around 2.38, which means there are at least two children on average for the respondent who is older than 65. As for the respondent who is under 18, we know that the mean and median are both 0, which means that for the respondent who is under 18, they do not have children. This data comply with common sense.
+
+\newpage
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+count_life <- df_new %>%
+  count(feelings_life) #counting the variable feelings_life
+
+ggplot(count_life, aes(x = feelings_life, y = n)) + 
+  geom_bar(stat = "identity", fill = "lightblue3", col = "white") +
+  geom_text(aes(label = n), hjust = 0.5, vjust = -0.25) + 
+  labs(title = "Life satisfaction of respondent",
+       x = "Life satisfaction",
+       y = "Count",
+       tag = "Figure2",
+       caption = "Source : General Social Survey, Families, 2017.") +
+  theme_classic(base_size = 10) +
+  scale_x_continuous(breaks=0:10, labels=c(0:10))
+
+```
+With a total of 20039 valid data collected, this bar plot illustrates a left-skewed respondents’ life satisfaction level distribution. The largest proportion of respondents are 80% satisfied with their life while the least proportion of respondents are 1% satisfied with their life. There are 6135 respondents (30.6% of the total respondents) are eighty percent satisfied, and 33 respondents (0.16% of the total respondents) are one percent satisfied with their life. There are 22.89% of respondents who are 100% satisfied with their current life. Approximately 72% of respondents are satisfied with a percentage of eighty or higher. More than half of Canadians are predicted to be highly satisfied with their life.
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# TABLE 2 basic statistics value of total children by feelings of life
+df_new %>%
+  group_by(feelings_life) %>% 
+  summarize(n = n(), Mean = mean(total_children, na.rm = T), Median = median(total_children, na.rm = TRUE),
+            SD = sd(total_children, na.rm = TRUE))  %>% 
+  mutate(freq = round(n / sum(n), 4))
+```
+
+For this table, we can see with the different life satisfaction, the mean total number of children is different. The highest mean of the total number of children is 1.93 for the respondent who chooses 10 (very satisfied), and the lowest is 1.24 for the respondent who chooses 1(dissatisfied).
+
+\newpage
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+count_education <- df_new %>%
+  count(education) #counting the variable education
+ggplot(count_education, aes(x = reorder(education, -n), y = n))+ 
+  geom_bar(stat = "identity", fill = "lightseagreen") +
+  geom_text(aes(label = n), hjust = 1, vjust = 0.3, col = "black") + 
+  theme_classic(base_size = 10) +
+  labs(x = "Education background", 
+       y = "Count", 
+       title = "Degree of education behind respondent",
+       caption = "Source: General Social Survey, Families, 2017",
+       tag = "Figure3") +
+  coord_flip()
+
+```
+## Figure 3
+The graph is the respondents' education level distribution. With a total of 20039 collected samples, there are 4522 respondents who have a college degree and 3732 respondents who have bachelor's degrees. There are 1470 respondents who have a trade diploma and 727 respondents who have a university diploma below the bachelor's degree. What're more, around 4792 respondents complete their high school diploma, and with 2978 respondents less than high school diplomas.
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+# basic statistics value of total children by education
+df_new %>%
+  group_by(education) %>% 
+  summarize(n = n(), Mean = mean(total_children, na.rm = T), Median = median(total_children, na.rm = TRUE),
+            SD = sd(total_children, na.rm = TRUE))  %>% 
+  mutate(freq = round(n / sum(n), 4))
+```
+## Table 3
+For this table, we can find that the mean of the total number of children is highest with 2.04 for the respondent whose education level is less than high school and the lowest mean is 1.41, which means for the respondent who is bachelor's degree, they are less likely to have children in this data.
+
+\newpage
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+df_new %>%
+  ggplot(aes(x = total_children, fill = education)) + geom_bar(position = "dodge", size = 10) +
+  theme_bw(base_size = 10) +
+  labs(x = "Number of Children", 
+       y = "Count", 
+       title = "Education level within each category",
+       caption = "Source: General Social Survey, Families, 2017",
+       tag = "Figure 4") +
+ scale_fill_brewer(palette = "Set1") + # setting the color for different category
+ scale_x_continuous(breaks=0:7, labels=c(0:7)) 
+  
+```
+## Figure 4
+This graph shows the education level within each category of the number of children respondents have. The largest proportion of respondents are respondents who have a high school degree. High school diploma respondents are the largest proportion of the four categories, which are the respondents are no child, two children, three children and four children. Besides that, for the respondents who have a college certificate, they are more likely to have one child under a different education level. For the respondent who has five or more children, respondents whose education level is less than a high school diploma occupies a heavy proportion.
+
+\newpage
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+count_income <- df_new %>%
+  count(income_family) #counting the variable income_family
+
+ggplot(count_income, aes(x = reorder(income_family, n), y = n)) + 
+  geom_bar(stat = "identity", fill = "cornflowerblue") +
+  geom_text(aes(label = n), hjust = 1.1, vjust = 0.3) +
+  theme_classic(base_size = 10) +
+  labs(x = "Family income", 
+       y = "Count", 
+       title = "Family income in 2016",
+       caption = "Source: T1FF 2016, Statistics Canada",
+       tag = "Figure 5") +
+  coord_flip() # Flip cartesian coordinates
+  
+```
+## Figure 5
+With a total of 20039 valid responses, this is the distribution of respondents’ family income. The largest proportion of respondents earn 125,000 dollars or more each year. There are 4701 respondents who annually earn 125,000 dollars or more, whereas 2154 respondents earn 100,000 dollars to 124,999 dollars. The distribution shows a right-skewed characteristic, which indicates that Canadian respondents earn a relatively high income to support their well-being. 
+
+\newpage
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+df_new %>%
+  ggplot(aes(x = total_children, fill = income_family)) + geom_bar(position = "dodge") +
+  theme_bw(base_size = 8) +
+  labs(x = "Number of Children", 
+       y = "Count", 
+       title = "The number of different income categories in the number of children in the household",
+       caption = "Source: General Social Survey, 2017.",
+       tag = "Figure 6") +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_x_continuous(breaks=0:7, labels=c(0:7))
+
+```
+## Figure 6
+This distribution shows the proportion of income levels within each number of children respondents have. The graph shows a detailed look into the childbearing favouritism in which respondents at different income levels are responded to. The outstanding feature of this graph is that respondents who earn 125,000 dollars and more are in the largest proportion under the category of two children. The respondents who earn 25,000 dollars to 49,999 dollars are in the largest proportion under the category that is not two children.
+
+\newpage
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+count_province <- df_new %>%
+  count(province) #counting the variable province
+
+ggplot(count_province, aes(x = reorder(province, n), y = n)) + 
+  geom_bar(stat = "identity", fill = "cornsilk4") +
+  geom_text(aes(label = n), hjust = 1, vjust = 0.2, col = "ivory") +
+  theme_classic(base_size = 10) +
+  labs(x = "Province", 
+       y = "Count", 
+       title = "Province of residence of the respondent",
+       caption = "Source: General Social Survey, Families, 2017.",
+       tag = "Figure 7") +
+  coord_flip()
+
+```
+## Figure 7
+This is a distribution of respondents’ residential province. A majority of respondents are from Ontario Province, with a number of 5616. With a total of 20583 collected samples, 27.3% respondents are from Ontario; 18.6% respondents are from Quebec; 12.3% respondents are from British Columbia; 8.40% respondents are Alberta; 6.90% respondents are from Nova Scotia; 6.49% respondents are from New Brunswick; 5.79% respondents are from Manitoba; 5.60% respondents are from Saskatchewan; 5.31% respondents are from Newfoundland and Labrador; 3.43% respondents are from Prince Edward Island.
+
+\newpage
+
+# Discussion
+
+## Figure 1 & Table 1
+
+As we can know from the figure 1, the samples’ households are common to have two kids, which is about 30% of the aggregates. The proportion of respondents whose is without any child is also around 30%. A relatively small proportion of respondents have more than three kids. The child distribution among the samples’ households is closed to realistic phenomena. According to the census of 2016 in Canada, the number of couples living with at least one child is 51.1%. This is the lowest level on record. There is also an increase in the proportion of couples living without a child. Compared to 2011, the proportion increases by 7.2%. Such increase is relatively large. The trends in the share of couples living with and without children indicates the diversity of households and families in Canada. From Figure 1 and Table 1, we can find that most Canadian families are likely to have no children or have two children. This is a very interesting point; the reason why the number of one child is only half of that of no children or two children. In our opinion, for those respondents who do not have children,  they are probably young and still in the early stages of their careers. Work is what they need most for their current situation. Secondly, it may be because some people do not want a child. This phenomenon is also widespread.  Why is the respondent with two children more than twice as many as the respondent with one child? Having two children be more conducive to the growth of the child? As children grow up, it is indeed a delightful thing to have a sibling. Besides, we feel that for most Canadians, they have enough economic capital money to support their children lives and future education. 
+
+## Figure 2 & Table 2
+
+Most of our respondents are satisfied with their life. More than 70% of the aggregates have a high index of life satisfaction. The average of our samples’ feelings_life is 7.88, which is relatively high. The variable, feelings_life, measures the samples' satisfaction. According to the World Happiness Report, Canadians’ average index of happiness is about 7.32 in 2017. Since the sample size is not large enough, there is a gap between these the average of samples’ feelings_life with the Canadians’ average index of happiness. The samples do reflect the majority of the population.
+
+\newpage
+
+## Figure 3,4 & Table 3
+
+From Figure 3, 4 and table 3, we can find that for most Canadians, they have at least complete a high school diploma, and whose education level is bachelor's degree and above bachelor's degree also account for a certain percentage. Will education level also affect the number of children in the household? We can imagine that it is difficult for those who currently focus on their studies to take care of their children. In this way, they probably will postpone marriage and childbearing. Additionally, we can find that those respondents with an education level less than a high school diploma ( relatively low diplomas) are more willing to have more children. Those with higher education levels give birth to 4, or the number of children above four will be relatively small. What caused these unusual phenomena? Does this situation fit the real social world situation?
+
+## Figure 5 & 6
+
+We think that households with low income tend to have more kids. The majority of the households with more than 3 kids are those families who have an annual income of less than $50,000. However, higher-income families are common to have 0 or 2 kids in each household. According to figure5 and 6, we found that the two most income ranges are 125,000dollars and more and 25,000 dollars to 49,999 dollars. The gap between the two ranges is enormous, and income imbalance is also a problem for modern society. Through figure 6, we found that respondents with incomes ranging from 25,000 dollars to 49,999 dollars are more likely to have no children or have four or more children. What is the reason cause the gap between them? We assume that it is easier to obtain a high-paying job with a higher education level under the general social environment. Combining the content of this paragraph with the previous one, is it possible that those relatively low-income respondents have a relatively basic level of education, which is with common sense.
+
+\newpage
+
+## Conclusion 
+
+Through this model and graph, it is not difficult to find that the number of children in the household is not just as simple as what it looks like. This data comes from GSS, which is raw data. Rohan Alexander and Sam Caetano help us clean the data, and then we group by different age groups. We found that for this data, more than 50% of respondents are over 45 years old. These age differences may cause data bias. For example, older people will have more children than younger people, which meets the actual social situation. In general, our report does prove that some variables may cause differences in the number of children in Canadian families. However, some biases in the data will cause uncertainty. One of the most important findings is that people with lower income will be more likely to have a big family, and ill-educated respondents generally have more children than high-educated respondents. Under the social environment that people will receive higher incomes with a higher education background, Can we boldly assume that those with low incomes are people with low educational backgrounds? If so, there will be more concern for the future report.
+
+# Weaknesses
+
+The first weakness is the inaccurate prediction due to the limited sample size. Since interviewers may review the respondent multiple times so that respondents fully complete the survey, the real sample size is underestimate. The Second weakness is the non-response bias. If the interview is quite time-consuming with long question, selected respondents may not have patience and time to complete all. The last and most important is that the respondent bias. Most of the age of respondents are over 45 which is higher than the mean of Canadian
+
+# Next Steps
+
+To reduce questionnaires’ shortcomings, we re-contact respondents who did not complete the interview the first time, explain questionnaires’ importance and convince them to complete the interviews. For respondents who are unavailable to answer the interview, we provide appointments as an option. Gradually, the Canadian response rate of GSS in 2017 has reached more than 50%. This analysis gives government a clearer version to understand the reason behind Canadian low fertility rate and to further improve provincial benefits. With our results, we can provide it federal and provincial government so that they can solve the aging phenomena with a better understanding. Population aging is a direct negative effect on Canadian labor force and capital accumulation. To the minimize the harm caused by population aging, Canadian government should encourage citizens on childbearing with a more customized Child Benefits to different income-level households. If government does better allocating resource, Canadian fertility rate may gradually increase. 
+
+\newpage
+
+# References
+
+- Alexander, R, & Caetano, S. (2020, October 7th). [Clean-up the 2017 GSS data obtained from the U of T library]. Unpublished raw data.
+
+- Canada Happiness index - data, chart. (n.d.). Retrieved October 19, 2020, from https://www.theglobaleconomy.com/Canada/happiness/
+
+- Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker (2015). Fitting Linear Mixed-Effects Models Using lme4. Journal of Statistical Software, 67(1), 1-48. doi:10.18637/jss.v067.i01.
+
+- Government of Canada, S. (2017, August 02). Families, households and marital status: Key results from the 2016 Census. Retrieved October 17, 2020, from https://www150.statcan.gc.ca/n1/daily-quotidien/170802/dq170802a-eng.htm
+
+- Government of Canada, S. (2017, November 29). Education in Canada: Key results from the 2016 Census. Retrieved October 19, 2020, from https://www150.statcan.gc.ca/n1/daily-quotidien/171129/dq171129a-eng.htm
+
+- Hadley Wickham, Romain Fran?ois, Lionel Henry and Kirill Müller (2020). dplyr: A Grammar of Data Manipulation. R package version 1.0.2. https://CRAN.R-project.org/package=dplyr
+
+- Hadley Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+
+- RStudio Team (2020). RStudio: Integrated Development for R. RStudio, PBC, Boston, MA URL http://www.rstudio.com/.
+
+- Sam Firke (2020). janitor: Simple Tools for Examining and Cleaning Dirty Data. R package version 2.0.1. https://CRAN.R-project.org/package=janitor
+
+- Sarkar, Deepayan (2008) Lattice: Multivariate Data Visualization with R. Springer, New York. ISBN 978-0-387-75968-5
+
+- Statistics Canada. (2017). General Social Survey On Family (Cycle 31), 2017 - Canadian General Social
+Surveys (GSS).. [online] Available at: https://sda-artsci-utoronto-ca.myaccess.library.utoronto.ca/sdaweb/
+html/gss.htm
+
+- Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43), 1686,https://doi.org/10.21105/joss.01686.
+
+- Xie Y (2019). “TinyTeX: A lightweight, cross-platform, and easy-to-maintain LaTeX distribution based on TeX Live.” TUGboat, 30–32. http://tug.org/TUGboat/Contents/contents40-1.html.
+
+- Xie Y (2020). tinytex: Helper Functions to Install and Maintain TeX Live, and Compile LaTeX Documents. R package version 0.26, https://github.com/yihui/tinytex.
+
+- Yihui Xie andJ.J. Allaire and Garrett Grolemund (2018). R Markdown:The Definitive Guide. Chapman and Hall/CRC. ISBN 9781138359338. URL https://bookdown.org/yihui/rmarkdown. 
